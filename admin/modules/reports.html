@@ -1,0 +1,159 @@
+<div class="card">
+  <div class="card-header bg-primary text-white">
+    <h5>Membership Analytics</h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body text-center">
+            <h6>Total Members</h6>
+            <h3 id="totalMembers">0</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body text-center">
+            <h6>New Members (This Month)</h6>
+            <h3 id="newMembers">0</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body text-center">
+            <h6>Membership Renewals Due</h6>
+            <h3 id="renewalsDue">0</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    <canvas id="membershipTrendChart" height="100"></canvas>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header bg-success text-white">
+    <h5>Financial Reports</h5>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Date Range:</label>
+        <div class="input-group">
+          <input type="date" id="reportStartDate" class="form-control">
+          <span class="input-group-text">to</span>
+          <input type="date" id="reportEndDate" class="form-control">
+          <button class="btn btn-primary" id="generateReportBtn">Generate</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h6>Revenue Breakdown</h6>
+          </div>
+          <div class="card-body">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h6>Top Selling Supplements</h6>
+          </div>
+          <div class="card-body">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Sales</th>
+                  <th>Revenue</th>
+                </tr>
+              </thead>
+              <tbody id="topProductsTable">
+                <!-- Will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header bg-info text-white">
+    <h5>Attendance Reports</h5>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <label class="form-label">Select Month:</label>
+        <input type="month" id="attendanceMonth" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Filter by:</label>
+        <select id="attendanceFilter" class="form-select">
+          <option value="all">All Members</option>
+          <option value="active">Active Members Only</option>
+          <option value="inactive">Inactive Members</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Total Visits</th>
+            <th>Avg. Weekly Visits</th>
+            <th>Last Visit</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceTable">
+          <!-- Will be populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header bg-warning text-dark">
+    <h5>Trainer Performance</h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <canvas id="trainerSessionChart"></canvas>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h6>Member Satisfaction</h6>
+          </div>
+          <div class="card-body">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Trainer</th>
+                  <th>Avg. Rating</th>
+                  <th>Sessions</th>
+                </tr>
+              </thead>
+              <tbody id="trainerRatingsTable">
+                <!-- Will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

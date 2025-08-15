@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Member Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    body { background-color: #f8f9fa; }
+    .sidebar {
+      background-color: #1e1e2d;
+      min-height: 100vh;
+      color: white;
+    }
+    .sidebar a {
+      display: block;
+      color: white;
+      padding: 10px 15px;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      background-color: #34344a;
+      border-radius: 5px;
+    }
+    #moduleContainer {
+      min-height: 80vh;
+    }
+    .profile-pic {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 3px solid white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar -->
+      <div class="col-md-2 sidebar p-3">
+        <h4 class="text-center mb-4">Member Panel</h4>
+        <a href="#" class="menu-link active" data-module="profile">
+          <i class="bi bi-person me-2"></i> Profile
+        </a>
+        <a href="#" class="menu-link" data-module="bills">
+          <i class="bi bi-credit-card me-2"></i> Bills
+        </a>
+        <a href="#" class="menu-link" data-module="dietPlans">
+          <i class="bi bi-egg-fried me-2"></i> Diet Plans
+        </a>
+        <a href="#" class="menu-link" data-module="supplements">
+          <i class="bi bi-capsule me-2"></i> Supplements
+        </a>
+        <a href="#" class="menu-link" data-module="notifications">
+          <i class="bi bi-bell me-2"></i> Notifications
+        </a>
+        <hr>
+        <a href="#" id="logoutBtn" class="text-danger">
+          <i class="bi bi-box-arrow-left me-2"></i> Logout
+        </a>
+      </div>
+
+      <!-- Main Content -->
+      <div class="col-md-10 p-4">
+        <div id="moduleContainer">
+          <!-- Modules will load here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/js/memebr/dashboard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<div class="container">
+  <h3 class="mb-4">🥗 Diet & Nutrition Plans</h3>
+
+  <div class="row">
+    <div class="col-md-6 mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">📝 Assign New Plan</h5>
+          <form id="dietForm" class="mt-3">
+            <div class="mb-3">
+              <label for="dietMember" class="form-label">Select Member</label>
+              <select id="dietMember" class="form-select" required>
+                <option value="" selected disabled>Loading members...</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label for="planType" class="form-label">Plan Type</label>
+              <select id="planType" class="form-select" required>
+                <option value="" selected disabled>Select type</option>
+                <option value="weight_loss">Weight Loss</option>
+                <option value="muscle_gain">Muscle Gain</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="custom">Custom Plan</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label for="planDetails" class="form-label">Plan Details</label>
+              <textarea id="planDetails" class="form-control" rows="5" 
+                placeholder="Enter detailed diet/nutrition instructions..." required></textarea>
+            </div>
+            
+            <div class="mb-3">
+              <label for="dietAttachment" class="form-label">Attachment (optional)</label>
+              <input type="file" id="dietAttachment" class="form-control" accept=".pdf,.doc,.docx">
+            </div>
+            
+            <div class="d-grid">
+              <button type="submit" class="btn btn-success">
+                <span id="submitBtnText">💾 Assign Diet Plan</span>
+                <span id="submitBtnSpinner" class="spinner-border spinner-border-sm d-none"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">📋 Diet Plan Templates</h5>
+          <div class="list-group mt-3">
+            <button class="list-group-item list-group-item-action template-btn" data-type="weight_loss">
+              <strong>Weight Loss</strong><br>
+              "High protein, low carb diet with calorie deficit"
+            </button>
+            <button class="list-group-item list-group-item-action template-btn" data-type="muscle_gain">
+              <strong>Muscle Gain</strong><br>
+              "High protein, calorie surplus with timed nutrition"
+            </button>
+            <button class="list-group-item list-group-item-action template-btn" data-type="maintenance">
+              <strong>Maintenance</strong><br>
+              "Balanced macronutrients with flexible dieting"
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="card-title mb-0">📜 Assigned Diet Plans</h5>
+        <div>
+          <select id="filterType" class="form-select form-select-sm" style="width: 150px;">
+            <option value="all">All Types</option>
+            <option value="weight_loss">Weight Loss</option>
+            <option value="muscle_gain">Muscle Gain</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Member</th>
+              <th>Type</th>
+              <th>Assigned On</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="dietList">
+            <tr>
+              <td colspan="4" class="text-center py-4">Loading diet plans...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-muted small" id="dietPlanCount">Showing 0 diet plans</div>
+        <nav>
+          <ul class="pagination pagination-sm mb-0" id="pagination">
+            <!-- Pagination will be added here -->
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/js/admin/diet-plans.js"></script>

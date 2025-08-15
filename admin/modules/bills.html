@@ -1,0 +1,58 @@
+<div class="container">
+  <h3 class="mb-4">📄 Generate & Manage Bills</h3>
+
+  <form id="billForm" class="row g-3 border p-3 bg-white rounded shadow-sm mb-4">
+    <div class="col-md-4">
+      <label for="memberSelect" class="form-label">Select Member</label>
+      <select id="memberSelect" class="form-select" required>
+        <option value="" selected disabled>Loading members...</option>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label for="packageSelect" class="form-label">Select Fee Package</label>
+      <select id="packageSelect" class="form-select" required>
+        <option value="" selected disabled>Loading packages...</option>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label for="dueDate" class="form-label">Due Date</label>
+      <input type="date" id="dueDate" class="form-control" required />
+    </div>
+
+    <div class="col-md-4">
+      <label for="amount" class="form-label">Amount (₹)</label>
+      <input type="number" id="amount" class="form-control" readonly />
+    </div>
+
+    <div class="col-md-12 d-grid">
+      <button type="submit" class="btn btn-success">
+        <span id="submitText">💾 Generate Bill</span>
+        <span id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+      </button>
+    </div>
+  </form>
+
+  <div class="table-responsive bg-white rounded shadow-sm p-3">
+    <table class="table table-bordered table-hover">
+      <thead class="table-dark">
+        <tr>
+          <th>Member</th>
+          <th>Package</th>
+          <th>Amount</th>
+          <th>Due Date</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="billList">
+        <tr>
+          <td colspan="6" class="text-center">Loading bills...</td>
+        </tr>
+      </tbody>
+    </table> 
+  </div>
+</div>
+
+<script type="module" src="/js/admin/bills.js"></script>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+        <link rel="stylesheet" href="/css/main.css">
+
+    <title>SignUp</title>
+  </head>
+  <body>
+    <div class="container" id="signup" >
+      <h1 class="form-title">Register</h1>
+      <form method="post" action="">
+
+        <div class="input-group">
+           <i class="fas fa-user"></i>
+           <input type="text"  id="fName" placeholder="First Name" required>
+           <label for="fname">Full Name</label>
+        </div>
+        
+        <div class="input-group">
+            <i class="fas fa-envelope"></i>
+            <input type="email"  id="rEmail" placeholder="Email" required>
+            <label for="rEmail">Email</label>
+        </div>
+        <div class="input-group">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="rPassword"  placeholder="Password" required>
+            <label for="rPassword">Password</label>
+        </div>
+        <div class="input-group">
+          <i class="fas sa-s"></i>
+          <label for="role">Select Role</label>
+
+        <select id="role" class="input" required>
+          <option value="">--Select--</option>
+          <option value="admin">Admin</option>
+          <option value="member">Member</option>
+          <option value="user">User</option>
+          <option value="trainer">Trianer</option>
+        </select>
+        </div>
+       <button class="btn" id="signupBtn" >Sign Up</button>
+      </form>
+      <p class="or">
+        ----------or--------
+      </p>
+      <div class="icons">
+        <i class="fab fa-google"></i>
+        <i class="fab fa-facebook"></i>
+      </div>
+      <div class="links">
+        <p>Already Have Account ?</p>
+        <!-- <button id="signInButton">Sign In</button> -->
+         <a href="login.html">Login</a>
+      </div>
+    </div>
+
+     <script type="module" src="/js/auth.js"></script>
+  </body>
+</html>

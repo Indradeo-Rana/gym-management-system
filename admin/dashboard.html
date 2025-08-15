@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - FlexFit Gym</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      overflow-x: hidden;
+    }
+    .sidebar {
+      height: 100vh;
+      background-color: #212529;
+      padding: 1rem;
+      color: white;
+    }
+    .sidebar a {
+      display: block;
+      padding: 0.7rem 1rem;
+      margin: 0.3rem 0;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      background-color: #495057;
+    }
+    .content-area {
+      padding: 2rem;
+    }
+  </style>
+</head>
+<body class="bg-light">
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark bg-dark px-3">
+    <span class="navbar-brand mb-0 h1">Admin Dashboard</span>
+    <button id="logoutBtn" class="btn btn-outline-light">Logout</button>
+  </nav>
+
+  <!-- Grid Layout -->
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar -->
+      <div class="col-md-2 sidebar">
+        <a href="#" class="active" data-page="dashboard">🏠 Dashboard</a>
+        <a href="#" data-page="members">🤵  Manage Members</a>
+        <a href="#" data-page="fee-packages">💰 Fee Packages</a>
+        <a href="#" data-page="bills">📄 Bills</a>
+        <a href="#" data-page="notifications">🔔 Notifications</a>
+        <a href="#" data-page="diet-plans">🥗 Diet Plans</a>
+        <a href="#" data-page="supplements">💊 Supplements</a>
+        <a href="#" data-page="reports">📊 Reports</a>
+      </div>
+
+      <!-- Content Area -->
+      <div class="col-md-10 content-area" id="mainContent">
+        <!-- This will dynamically change -->
+        <h2>Welcome Admin 👋</h2>
+        <p>Select a module from the left to manage data.</p>
+        <div id="dashboardContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script type="module" src="/js/admin/dashboard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!-- members.html -->
+<div class="container">
+  <h3 class="mb-4">🤵 Manage Members</h3>
+
+  <!-- Add Member Form -->
+  <form id="addMemberForm" class="row g-3 mb-4 border p-3 bg-white rounded shadow-sm">
+    <div class="col-md-4">
+      <input type="text" id="memberName" class="form-control" placeholder="Full Name" required />
+    </div>
+    <div class="col-md-4">
+      <input type="email" id="memberEmail" class="form-control" placeholder="Email" required />
+    </div>
+    <div class="col-md-4">
+      <input type="text" id="memberPhone" class="form-control" placeholder="Phone Number" required pattern="[0-9]{10}" title="Enter a valid 10-digit phone number" />
+    </div>
+    <div class="col-md-4">
+      <input type="text" id="memberPlan" class="form-control" placeholder="Plan (e.g., Gold, Silver)" />
+    </div>
+    <div class="col-md-4">
+      <input type="number" id="memberAge" class="form-control" placeholder="Age" min="10" max="100" />
+    </div>
+    <div class="col-md-4 d-grid">
+      <button type="submit" class="btn btn-success">Add Member</button>
+    </div>
+  </form>
+
+  <!-- Members Table -->
+  <div class="table-responsive bg-white rounded shadow-sm p-3">
+    <table class="table table-bordered table-hover align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Plan</th>
+          <th>Age</th>
+          <th style="width: 100px;">Action</th>
+        </tr>
+      </thead>
+      <tbody id="memberList">
+        <!-- Members will be loaded here dynamically -->
+      </tbody>
+    </table>
+  </div>
+</div>
