@@ -125,8 +125,3 @@ function redirectToDashboard(role) {
       window.location.href = "/user/dashboard.html";
   }
 }
-
-
-
-
-

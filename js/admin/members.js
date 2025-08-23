@@ -95,21 +95,23 @@ addForm.addEventListener("submit", async (e) => {
   }
 
   try {
-    await addDoc(collection(db, "members"), {
-      name,
-      email,
-      phone,
-      plan,
-      age,
-      createdAt: serverTimestamp()
-    });
+  await addDoc(collection(db, "members"), {
+    name,
+    email,
+    phone,
+    plan,
+    age,
+    role: "member",  // ✅ Add role field
+    createdAt: serverTimestamp()
+  });
 
-    alert("✅ Member added successfully");
-    addForm.reset();
-    loadMembers();
+  alert("✅ Member added successfully");
+  addForm.reset();
+  loadMembers();
 
-  } catch (err) {
-    console.error("❌ Error adding member:", err);
-    alert("Error: " + err.message);
-  }
+} catch (err) {
+  console.error("❌ Error adding member:", err);
+  alert("Error: " + err.message);
+}
+
 });

@@ -1,6 +1,6 @@
-import {app, auth, db, storage} from "../firebase-config.js"
+import { app, auth, db, storage } from "../firebase-config.js";
 import { 
-  getFirestore, collection, addDoc, deleteDoc, doc,
+  getFirestore, collection, addDoc, deleteDoc, doc, updateDoc,
   getDocs, getDoc, query, where, orderBy, serverTimestamp,
   onSnapshot, limit, startAfter, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -31,405 +31,513 @@ const itemsPerPage = 10;
 let currentPage = 1;
 let totalNotifications = 0;
 let unsubscribeNotifications = null;
+let currentUserRole = null;
 
-// 🔐 Enhanced Authentication Check
+// Console styling
+const consoleStyles = {
+  admin: 'background: #4e73df; color: white; padding: 2px 4px; border-radius: 3px;',
+  member: 'background: #1cc88a; color: white; padding: 2px 4px; border-radius: 3px;',
+  error: 'background: #e74a3b; color: white; padding: 2px 4px; border-radius: 3px;',
+  info: 'background: #36b9cc; color: white; padding: 2px 4px; border-radius: 3px;'
+};
+
+/* ---------------------------------------
+   SETUP TEMPLATE BUTTONS (Missing Function)
+----------------------------------------*/
+function setupTemplateButtons() {
+  console.log("%cSetting up notification template buttons", consoleStyles.admin);
+  
+  // Check if template buttons exist in the DOM
+  const templateButtons = document.querySelectorAll('[data-template]');
+  
+  if (templateButtons.length === 0) {
+    console.log("%cNo template buttons found in DOM", consoleStyles.info);
+    return;
+  }
+  
+  const templates = {
+    workout: "🏋️ Your workout schedule has been updated. Check the app for details.",
+    diet: "🥗 Your new diet plan is ready! Please review and follow accordingly.",
+    payment: "💳 Payment reminder: Your subscription is due for renewal.",
+    general: "📢 Important announcement: Please check your member portal.",
+    emergency: "🚨 Emergency: The gym will be closed today due to maintenance."
+  };
+  
+  templateButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const templateType = button.getAttribute('data-template');
+      if (templates[templateType]) {
+        messageInput.value = templates[templateType];
+        console.log(`%cLoaded template: ${templateType}`, consoleStyles.admin);
+      }
+    });
+  });
+  
+  console.log(`%cSetup ${templateButtons.length} template buttons`, consoleStyles.admin);
+}
+
+/* ---------------------------------------
+   AUTH + ROLE DETECTION (with fallback)
+----------------------------------------*/
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    console.log("No user signed in - redirecting to login");
+    console.log("%cNo user signed in - redirecting to login", consoleStyles.error);
     window.location.href = "/public/login.html";
     return;
   }
 
   try {
-    console.log("User signed in, verifying admin status...");
-    
-    // Get user document
-    const userDoc = await getDoc(doc(db, "users", user.uid));
-    
-    // Check if document exists
-    if (!userDoc.exists()) {
-      console.error("User document not found in Firestore");
-      alert("Your account is not properly configured. Please contact support.");
-      await signOut(auth);
-      window.location.href = "/public/login.html";
-      return;
+    // Try users/{uid} first
+    let role = null;
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+      role = userDoc.data().role;
+    } else {
+      // Fallback: check members/{uid}
+      const memberDocRef = doc(db, "members", user.uid);
+      const memberDoc = await getDoc(memberDocRef);
+      if (memberDoc.exists()) {
+        role = "member";
+      }
     }
 
-    // Check admin role
-    const userData = userDoc.data();
-    if (userData.role !== "admin") {
-      console.log("User is not admin - redirecting");
-      alert("Access Denied: Administrator privileges required");
+    currentUserRole = role;
+    console.log(`%cUser authenticated with role: ${currentUserRole}`, consoleStyles.info);
+
+    if (currentUserRole === "admin") {
+      console.log("%cLoading admin notifications interface", consoleStyles.admin);
+      await loadMembers();
+      setupTemplateButtons(); // This function now exists
+      loadNotifications();
+      setupRealTimeCount();
+    } else if (currentUserRole === "member") {
+      console.log("%cLoading member notifications interface", consoleStyles.member);
+      if (notifyForm) notifyForm.style.display = "none";
+      // Member gets their notifications
+      loadMemberNotifications(user.uid);
+    } else {
+      console.log("%cAccess Denied - Unknown role", consoleStyles.error);
+      alert("Access Denied");
       await signOut(auth);
       window.location.href = "/public/login.html";
-      return;
     }
 
-    console.log("Admin access verified - loading notifications system");
-    
-    // Load initial data
-    await loadMembers();
-    setupTemplateButtons();
-    loadNotifications();
-    setupRealTimeCount();
-    
   } catch (error) {
-    console.error("Detailed authentication error:", {
-      code: error.code,
-      message: error.message,
-      stack: error.stack
-    });
-    
-    let errorMessage = "Error verifying access";
-    if (error.code === 'permission-denied') {
-      errorMessage = "Database permissions error. Please try again later.";
-    } else if (error.code === 'unavailable') {
-      errorMessage = "Network error. Please check your internet connection.";
-    }
-    
-    alert(`${errorMessage}. Please try again.`);
-    
-    try {
-      await signOut(auth);
-    } catch (signOutError) {
-      console.error("Sign out failed:", signOutError);
-    }
-    
+    console.error("%cAuthentication error:", consoleStyles.error, error);
+    alert(`Error verifying access: ${error.message}`);
+    await signOut(auth);
     window.location.href = "/public/login.html";
   }
 });
 
-// Load Members
+/* ---------------------------------------
+   LOAD MEMBERS (Admin Only)
+----------------------------------------*/
 async function loadMembers() {
   try {
+    if (!memberSelect) return;
+
+    console.log("%cLoading members for notification dropdown", consoleStyles.admin);
     memberSelect.innerHTML = '<option value="" selected disabled>Loading members...</option>';
-    const querySnapshot = await getDocs(collection(db, "members"));
-    
+
+    const snap = await getDocs(collection(db, "members"));
     membersMap = {};
+
     memberSelect.innerHTML = `
       <option value="" selected disabled>Select member</option>
       <option value="all">All Members</option>
     `;
-    
-    querySnapshot.forEach(doc => {
-      const member = doc.data();
-      membersMap[doc.id] = member.fullName || `Member ${doc.id.substring(0, 5)}`;
-      
-      const option = document.createElement("option");
-      option.value = doc.id;
-      option.textContent = membersMap[doc.id];
-      memberSelect.appendChild(option);
+
+    snap.forEach(docSnap => {
+      const m = docSnap.data();
+
+      const displayName =
+        (m.fullName && m.fullName.trim()) ||
+        (m.name && m.name.trim()) ||
+        `${(m.firstName || "").trim()} ${(m.lastName || "").trim()}`.trim() ||
+        (m.email ? m.email.split("@")[0] : "") ||
+        `Member ${docSnap.id.substring(0, 5)}`;
+
+      membersMap[docSnap.id] = displayName;
+
+      const opt = document.createElement("option");
+      opt.value = docSnap.id;
+      opt.textContent = displayName;
+      memberSelect.appendChild(opt);
     });
+
+    console.log(`%cLoaded ${snap.size} members for notifications`, consoleStyles.admin);
     
+    if (snap.empty) {
+      console.log("%cNo members found in database", consoleStyles.error);
+      memberSelect.innerHTML = '<option value="" disabled>No members found</option>';
+    }
   } catch (error) {
-    console.error("Error loading members:", error);
-    memberSelect.innerHTML = '<option value="" selected disabled>Error loading members</option>';
+    console.error("%cError loading members:", consoleStyles.error, error);
+    memberSelect.innerHTML = '<option value="" disabled>Error loading members</option>';
   }
 }
 
-// Setup Template Buttons
-function setupTemplateButtons() {
-  document.querySelectorAll(".template-btn").forEach(btn => {
-    btn.addEventListener("click", function() {
-      const type = this.getAttribute("data-type");
-      notifyType.value = type;
+/* ---------------------------------------
+   SUBMIT NOTIFICATION (Admin)
+----------------------------------------*/
+if (notifyForm) {
+  notifyForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const type = notifyType.value;
+    const memberId = memberSelect.value;
+    const message = messageInput.value.trim();
+    const attachment = attachmentInput.files[0];
+    
+    if (!type || !memberId || !message) {
+      console.log("%cNotification form validation failed - missing fields", consoleStyles.error);
+      alert("Please fill all required fields");
+      return;
+    }
+
+    try {
+      sendBtnText.classList.add("d-none");
+      sendBtnSpinner.classList.remove("d-none");
+      notifyForm.querySelector("button").disabled = true;
       
-      switch(type) {
-        case "payment":
-          messageInput.value = `Dear member,\n\nThis is a reminder that your monthly payment is due on [date].\n\nAmount: ₹[amount]\n\nPlease make the payment at your earliest convenience to avoid any service interruptions.\n\nThank you,\n[Your Gym Name]`;
-          break;
-        case "announcement":
-          messageInput.value = `Attention all members,\n\nThe gym will be closed on [date] for [reason].\n\nWe apologize for any inconvenience and appreciate your understanding.\n\nRegular hours will resume on [reopening date].\n\nThank you,\n[Your Gym Name]`;
-          break;
-        case "schedule":
-          messageInput.value = `Dear member,\n\nYour [class name] class scheduled for [date] at [time] has been changed to [new time].\n\nWe apologize for any inconvenience this may cause.\n\nPlease update your schedule accordingly.\n\nThank you,\n[Your Gym Name]`;
-          break;
+      let attachmentUrl = "";
+      if (attachment) {
+        console.log("%cUploading notification attachment", consoleStyles.admin);
+        const storageRef = ref(storage, `notifications/${Date.now()}_${attachment.name}`);
+        const snapshot = await uploadBytes(storageRef, attachment);
+        attachmentUrl = await getDownloadURL(snapshot.ref);
+        console.log("%cAttachment uploaded successfully", consoleStyles.admin, attachmentUrl);
       }
-    });
+
+      const notificationData = {
+        type,
+        memberId: memberId === "all" ? null : memberId,
+        memberName: memberId === "all" ? "All Members" : (membersMap[memberId] || "Member"),
+        message,
+        attachmentUrl,
+        status: "sent",
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser.uid,
+        read: false
+      };
+
+      console.log("%cCreating new notification:", consoleStyles.admin, notificationData);
+      
+      const docRef = await addDoc(collection(db, "notifications"), notificationData);
+      console.log("%cNotification created successfully with ID:", consoleStyles.admin, docRef.id);
+      
+      notifyForm.reset();
+      attachmentInput.value = "";
+      alert("Notification sent successfully!");
+      currentPage = 1;
+      loadNotifications();
+
+    } catch (error) {
+      console.error("%cError sending notification:", consoleStyles.error, error);
+      alert(`Failed to send notification: ${error.message}`);
+    } finally {
+      sendBtnText.classList.remove("d-none");
+      sendBtnSpinner.classList.add("d-none");
+      notifyForm.querySelector("button").disabled = false;
+    }
   });
 }
 
-// Submit Notification
-notifyForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  
-  const type = notifyType.value;
-  const memberId = memberSelect.value;
-  const message = messageInput.value.trim();
-  const attachment = attachmentInput.files[0];
-  
-  if (!type || !memberId || !message) {
-    alert("Please fill all required fields");
-    return;
-  }
-
-  try {
-    // Show loading state
-    sendBtnText.classList.add("d-none");
-    sendBtnSpinner.classList.remove("d-none");
-    notifyForm.querySelector("button").disabled = true;
-    
-    // Upload attachment if exists
-    let attachmentUrl = "";
-    if (attachment) {
-      const storageRef = ref(storage, `notifications/${Date.now()}_${attachment.name}`);
-      const snapshot = await uploadBytes(storageRef, attachment);
-      attachmentUrl = await getDownloadURL(snapshot.ref);
-    }
-    
-    // Create notification
-    const notificationData = {
-      type,
-      memberId: memberId === "all" ? null : memberId,
-      memberName: memberId === "all" ? "All Members" : membersMap[memberId],
-      message,
-      attachmentUrl,
-      status: "sent",
-      createdAt: serverTimestamp(),
-      createdBy: auth.currentUser.uid
-    };
-    
-    await addDoc(collection(db, "notifications"), notificationData);
-    
-    // Reset form
-    notifyForm.reset();
-    attachmentInput.value = "";
-    alert("Notification sent successfully!");
-    
-    // Reload notifications
-    currentPage = 1;
-    loadNotifications();
-    
-  } catch (error) {
-    console.error("Error sending notification:", error);
-    alert(`Failed to send notification: ${error.message}`);
-    
-  } finally {
-    // Reset button state
-    sendBtnText.classList.remove("d-none");
-    sendBtnSpinner.classList.add("d-none");
-    notifyForm.querySelector("button").disabled = false;
-  }
-});
-
-// Load Notifications with Pagination
+/* ---------------------------------------
+   LOAD NOTIFICATIONS (Admin list with pagination)
+----------------------------------------*/
 async function loadNotifications() {
+  if (currentUserRole !== "admin") return;
+  
   try {
-    notificationList.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center py-4">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-        </td>
-      </tr>
-    `;
+    console.log("%cLoading admin notifications list", consoleStyles.admin);
+    notificationList.innerHTML = `<tr><td colspan="6" class="text-center py-4">
+      <div class="spinner-border text-primary" role="status"></div></td></tr>`;
     
-    // Build query
-    let q = query(
+    let q1 = query(
       collection(db, "notifications"),
       orderBy("createdAt", "desc"),
       limit(itemsPerPage)
     );
-    
-    if (filterType.value !== "all") {
-      q = query(q, where("type", "==", filterType.value));
+
+    if (filterType && filterType.value !== "all") {
+      q1 = query(q1, where("type", "==", filterType.value));
+      console.log(`%cFiltering notifications by type: ${filterType.value}`, consoleStyles.admin);
     }
-    
+
     if (currentPage > 1 && lastVisibleDoc) {
-      q = query(q, startAfter(lastVisibleDoc));
+      q1 = query(q1, startAfter(lastVisibleDoc));
     }
-    
-    const querySnapshot = await getDocs(q);
-    
-    // Update last visible document for pagination
+
+    const querySnapshot = await getDocs(q1);
+
     if (querySnapshot.docs.length > 0) {
       lastVisibleDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
     }
+
+    console.log(`%cLoaded ${querySnapshot.size} notifications for admin view`, consoleStyles.admin);
     
-    // Render notifications
     let html = "";
-    querySnapshot.forEach(doc => {
-      const n = doc.data();
-      const time = n.createdAt?.toDate().toLocaleString() || "N/A";
-      
-      html += `
-        <tr>
-          <td>
-            <span class="badge ${getTypeBadgeClass(n.type)}">
-              ${n.type || 'other'}
-            </span>
-          </td>
-          <td>${n.memberName || "All Members"}</td>
-          <td class="message-cell">
-            <div class="message-preview">${n.message.substring(0, 50)}${n.message.length > 50 ? '...' : ''}</div>
-            ${n.attachmentUrl ? '<i class="bi bi-paperclip ms-2"></i>' : ''}
-          </td>
-          <td>${time}</td>
-          <td>
-            <span class="badge ${getStatusBadgeClass(n.status)}">
-              ${n.status}
-            </span>
-          </td>
-          <td class="text-nowrap">
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="viewNotification('${doc.id}')">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteNotification('${doc.id}')">
-              <i class="bi bi-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `;
+    querySnapshot.forEach(docSnap => {
+      const n = docSnap.data();
+      const time = n.createdAt?.toDate?.().toLocaleString?.() || "N/A";
+      html += `<tr>
+        <td><span class="badge ${getTypeBadgeClass(n.type)}">${n.type}</span></td>
+        <td>${n.memberName || "All Members"}</td>
+        <td class="message-cell">${(n.message || "").substring(0,50)}${(n.message || "").length>50?'...':''}${n.attachmentUrl?'<i class="bi bi-paperclip ms-2"></i>':''}</td>
+        <td>${time}</td>
+        <td><span class="badge ${getStatusBadgeClass(n.status)}">${n.status || "sent"}</span></td>
+        <td class="text-nowrap">
+          <button class="btn btn-sm btn-outline-primary me-1" onclick="viewNotification('${docSnap.id}')">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteNotification('${docSnap.id}')">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>`;
     });
-    
-    notificationList.innerHTML = html || `
-      <tr>
-        <td colspan="6" class="text-center py-4">No notifications found</td>
-      </tr>
-    `;
-    
-    // Update pagination
+
+    notificationList.innerHTML = html || `<tr><td colspan="6" class="text-center py-4">No notifications found</td></tr>`;
     updatePagination();
-    
+
   } catch (error) {
-    console.error("Error loading notifications:", error);
-    notificationList.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center py-4 text-danger">Error loading notifications</td>
-      </tr>
-    `;
+    console.error("%cError loading notifications:", consoleStyles.error, error);
+    notificationList.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading notifications</td></tr>`;
   }
 }
 
-// Setup real-time notification count
+/* ---------------------------------------
+   LOAD NOTIFICATIONS (Member Only)
+----------------------------------------*/
+async function loadMemberNotifications(authUid) {
+  try {
+    // Use the actual user UID
+    const memberId = authUid;
+    console.log(`%cLoading notifications for member: ${memberId}`, consoleStyles.member);
+
+    notificationList.innerHTML = `<tr><td colspan="5" class="text-center py-4">
+      <div class="spinner-border text-primary" role="status"></div></td></tr>`;
+
+    // Query for notifications sent to this specific member OR to all members
+    const q = query(
+      collection(db, "notifications"),
+      where("memberId", "in", [memberId, null]),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notifications = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        notifications.push({ id: docSnap.id, ...data });
+        
+        // Log each notification that's being sent to the member
+        console.log(`%cMember received notification:`, consoleStyles.member, {
+          id: docSnap.id,
+          type: data.type,
+          message: data.message,
+          createdAt: data.createdAt?.toDate?.() || null,
+          read: data.read || false
+        });
+      });
+
+      console.log(`%cMember has ${notifications.length} notifications`, consoleStyles.member);
+
+      if (notifications.length === 0) {
+        notificationList.innerHTML = `<tr><td colspan="5" class="text-center">No notifications found</td></tr>`;
+        return;
+      }
+
+      let html = "";
+      notifications.forEach(n => {
+        const dateObj = n.createdAt?.toDate?.() || null;
+        const time = dateObj ? dateObj.toLocaleString() : "N/A";
+        const isUnread = !n.read;
+        
+        html += `<tr class="${isUnread ? 'table-info' : ''}">
+          <td><span class="badge ${getTypeBadgeClass(n.type)}">${n.type || "general"}</span></td>
+          <td>${n.message || ""}</td>
+          <td>${n.attachmentUrl ? `<a href="${n.attachmentUrl}" target="_blank">View Attachment</a>` : 'N/A'}</td>
+          <td>${time}</td>
+          <td>
+            <span class="badge ${isUnread ? 'bg-warning' : 'bg-success'}">
+              ${isUnread ? 'Unread' : 'Read'}
+            </span>
+          </td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary" onclick="markAsRead('${n.id}')">
+              Mark as Read
+            </button>
+          </td>
+        </tr>`;
+      });
+
+      notificationList.innerHTML = html;
+    });
+
+    // Store unsubscribe function to clean up later
+    window.addEventListener('beforeunload', () => unsubscribe());
+
+  } catch (error) {
+    console.error("%cError loading member notifications:", consoleStyles.error, error);
+    notificationList.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Failed to load notifications</td></tr>`;
+  }
+}
+
+/* ---------------------------------------
+   REAL-TIME COUNT (Admin)
+----------------------------------------*/
 function setupRealTimeCount() {
+  if (currentUserRole !== "admin") return;
+
   const q = query(collection(db, "notifications"));
   
   getCountFromServer(q).then((snapshot) => {
     totalNotifications = snapshot.data().count;
+    console.log(`%cTotal notifications in system: ${totalNotifications}`, consoleStyles.admin);
     updateNotificationCount();
   });
-  
-  // Update count when notifications change
+
   unsubscribeNotifications = onSnapshot(q, (snapshot) => {
     totalNotifications = snapshot.size;
     updateNotificationCount();
   });
 }
 
-function updateNotificationCount() {
-  notificationCount.textContent = `Showing ${Math.min(itemsPerPage, totalNotifications)} of ${totalNotifications} notifications`;
-}
-
-function updatePagination() {
-  const totalPages = Math.ceil(totalNotifications / itemsPerPage);
-  pagination.innerHTML = '';
-  
-  if (totalPages <= 1) return;
-  
-  // Previous button
-  const prevLi = document.createElement('li');
-  prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-  prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous">&laquo;</a>`;
-  prevLi.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (currentPage > 1) {
-      currentPage--;
-      loadNotifications();
-    }
-  });
-  pagination.appendChild(prevLi);
-  
-  // Page numbers
-  for (let i = 1; i <= totalPages; i++) {
-    const li = document.createElement('li');
-    li.className = `page-item ${currentPage === i ? 'active' : ''}`;
-    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-    li.addEventListener('click', (e) => {
-      e.preventDefault();
-      currentPage = i;
-      loadNotifications();
-    });
-    pagination.appendChild(li);
-  }
-  
-  // Next button
-  const nextLi = document.createElement('li');
-  nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-  nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next">&raquo;</a>`;
-  nextLi.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (currentPage < totalPages) {
-      currentPage++;
-      loadNotifications();
-    }
-  });
-  pagination.appendChild(nextLi);
-}
-
-// Filter notifications by type
-filterType.addEventListener("change", () => {
-  currentPage = 1;
-  lastVisibleDoc = null;
-  loadNotifications();
-});
-
-// Helper functions
+/* ---------------------------------------
+   HELPER FUNCTIONS (Missing functions)
+----------------------------------------*/
 function getTypeBadgeClass(type) {
   switch(type) {
+    case 'workout': return 'bg-primary';
+    case 'diet': return 'bg-success';
     case 'payment': return 'bg-warning text-dark';
-    case 'announcement': return 'bg-info text-dark';
-    case 'schedule': return 'bg-primary';
+    case 'emergency': return 'bg-danger';
     default: return 'bg-secondary';
   }
 }
 
 function getStatusBadgeClass(status) {
   switch(status) {
-    case 'sent': return 'bg-success';
-    case 'read': return 'bg-primary';
+    case 'sent': return 'bg-info';
+    case 'read': return 'bg-success';
     case 'failed': return 'bg-danger';
     default: return 'bg-secondary';
   }
 }
 
-// Global functions
-window.viewNotification = async (id) => {
-  const docSnap = await getDoc(doc(db, "notifications", id));
-  if (docSnap.exists()) {
-    const n = docSnap.data();
-    let message = `Type: ${n.type}\n\n`;
-    message += `To: ${n.memberName || "All Members"}\n\n`;
-    message += `Message:\n${n.message}\n\n`;
-    message += `Sent: ${n.createdAt?.toDate().toLocaleString() || 'N/A'}`;
+function updateNotificationCount() {
+  if (notificationCount) {
+    notificationCount.textContent = totalNotifications;
+  }
+}
+
+function updatePagination() {
+  if (!pagination) return;
+  
+  const totalPages = Math.ceil(totalNotifications / itemsPerPage);
+  
+  if (totalPages <= 1) {
+    pagination.innerHTML = '';
+    return;
+  }
+  
+  let html = `<nav><ul class="pagination pagination-sm">`;
+  
+  // Previous button
+  html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
+  </li>`;
+  
+  // Page numbers
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+      <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+    </li>`;
+  }
+  
+  // Next button
+  html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
+  </li>`;
+  
+  html += `</ul></nav>`;
+  pagination.innerHTML = html;
+}
+
+/* ---------------------------------------
+   GLOBAL FUNCTIONS (Admin actions)
+----------------------------------------*/
+window.viewNotification = async (id)=>{
+  console.log(`%cAdmin viewing notification: ${id}`, consoleStyles.admin);
+  const docSnap = await getDoc(doc(db,"notifications",id));
+  if(docSnap.exists()){
+    const n=docSnap.data();
+    const dateObj = n.createdAt?.toDate?.() || null;
+    let message=`Type: ${n.type}\n\nTo: ${n.memberName||"All Members"}\n\nMessage:\n${n.message}\n\nSent: ${dateObj ? dateObj.toLocaleString() : 'N/A'}`;
+    if(n.attachmentUrl) message+=`\n\nAttachment: ${n.attachmentUrl}`;
     
-    if (n.attachmentUrl) {
-      message += `\n\nAttachment: ${n.attachmentUrl}`;
-    }
+    console.log("%cNotification details:", consoleStyles.admin, {
+      id: id,
+      type: n.type,
+      recipient: n.memberName || "All Members",
+      message: n.message,
+      attachment: n.attachmentUrl || "None",
+      createdAt: dateObj,
+      status: n.status
+    });
     
     alert(message);
-  } else {
+  }else{
+    console.log(`%cNotification not found: ${id}`, consoleStyles.error);
     alert("Notification not found");
   }
 };
 
-window.deleteNotification = async (id) => {
-  if (confirm("Are you sure you want to delete this notification?")) {
+window.deleteNotification = async (id)=>{
+  if(confirm("Are you sure you want to delete this notification?")){
     try {
-      await deleteDoc(doc(db, "notifications", id));
+      console.log(`%cDeleting notification: ${id}`, consoleStyles.admin);
+      await deleteDoc(doc(db,"notifications",id));
+      console.log(`%cNotification deleted successfully: ${id}`, consoleStyles.admin);
       alert("Notification deleted successfully");
       loadNotifications();
-    } catch (error) {
-      console.error("Error deleting notification:", error);
+    } catch(error){
+      console.error("%cError deleting notification:", consoleStyles.error, error);
       alert("Failed to delete notification");
     }
   }
 };
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-  if (unsubscribeNotifications) {
-    unsubscribeNotifications();
+window.markAsRead = async (id) => {
+  try {
+    console.log(`%cMember marking notification as read: ${id}`, consoleStyles.member);
+    await updateDoc(doc(db, "notifications", id), { 
+      read: true,
+      readAt: new Date() 
+    });
+    console.log(`%cNotification marked as read: ${id}`, consoleStyles.member);
+    
+    // Reload notifications to update UI
+    if (currentUserRole === "member") {
+      loadMemberNotifications(auth.currentUser.uid);
+    }
+  } catch (error) {
+    console.error("%cError marking notification as read:", consoleStyles.error, error);
+  }
+};
+
+window.changePage = (page) => {
+  currentPage = page;
+  loadNotifications();
+};
+
+window.addEventListener('beforeunload',()=>{ 
+  if(unsubscribeNotifications) {
+    console.log("%cCleaning up admin notification listeners", consoleStyles.admin);
+    unsubscribeNotifications(); 
   }
 });
